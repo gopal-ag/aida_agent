@@ -1,0 +1,5 @@
+{
+    "model_type": "xgboost",
+    "version": "1.2",
+    "features": {"income": "float", "age": "int"}
+}
