@@ -33,7 +33,7 @@ AiDa comes equipped with specialized Python tools to diagnose ML pipelines:
 5. **Final Diagnosis:** Execution resumes, and AiDa delivers the exact error root cause alongside a practical code fix.
 
 ## Architecture: 
-
+<img width="1414" height="2000" alt="arc" src="https://github.com/user-attachments/assets/c1de8e95-bebb-4757-b42e-f4c2b19e4f71" />
 
 ## 💻 Setup & Installation
 
