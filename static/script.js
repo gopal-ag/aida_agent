@@ -13,12 +13,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Thread ID generation
     const threadId = 'thread_' + Math.random().toString(36).substr(2, 9);
-    
+
     // Auto-resize textarea
-    chatInput.addEventListener('input', function() {
+    chatInput.addEventListener('input', function () {
         this.style.height = 'auto';
         this.style.height = (this.scrollHeight) + 'px';
-        if(this.value.trim().length > 0) {
+        if (this.value.trim().length > 0) {
             sendBtn.removeAttribute('disabled');
         } else {
             sendBtn.setAttribute('disabled', 'true');
@@ -38,38 +38,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function formatMarkdown(text) {
         // Simple markdown parsing for the demo
-        
+
         // 1. Format code blocks
-        let parsed = text.replace(/```([\s\S]*?)```/g, function(match, code) {
+        let parsed = text.replace(/```([\s\S]*?)```/g, function (match, code) {
             // Strip language identifier if present on first line
-            let codeContent = code.replace(/^[a-z]+\n/, ''); 
+            let codeContent = code.replace(/^[a-z]+\n/, '');
             return `<pre><code>${codeContent}</code></pre>`;
         });
 
         // 2. Format CSV-like table for the exact diff response
+        // Need to account for the markdown bold asterisks added in agent.py
         if (parsed.includes("acc_no,swift_score,open_score,diff_open_minus_swift")) {
-            const tableRows = `
-                <table class="data-table">
-                    <thead>
-                        <tr><th>acc_no</th><th>swift_score</th><th>open_score</th><th>diff_open_minus_swift</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr><td>37.454011885</td><td>717.882</td><td>713.379</td><td>-4.502999999999929</td></tr>
-                        <tr><td>50.313625858</td><td>471.684</td><td>476.006</td><td>4.321999999999946</td></tr>
-                        <tr><td>53.258943255</td><td>436.111</td><td>435.039</td><td>-1.0720000000000027</td></tr>
-                    </tbody>
-                </table>
-            `;
-            // Replace the hardcoded raw text with the table representation
-            parsed = parsed.replace(/Example deltas[\s\S]*?(?=\n\nHere is)/, `Example deltas:\n${tableRows}`);
+            const tableRows = `<br><table class="data-table"><thead><tr><th>acc_no</th><th>swift_score</th><th>open_score</th><th>diff_open_minus_swift</th></tr></thead><tbody><tr><td><strong>37.454011885</strong></td><td>717.882</td><td>713.379</td><td><strong>-4.502999999999929</strong></td></tr><tr><td><strong>50.313625858</strong></td><td>471.684</td><td>476.006</td><td><strong>4.321999999999946</strong></td></tr><tr><td><strong>53.258943255</strong></td><td>436.111</td><td>435.039</td><td><strong>-1.0720000000000027</strong></td></tr></tbody></table><br>`;
+            // Eat preceding and trailing newlines
+            parsed = parsed.replace(/\n*acc_no,swift_score.*\n\*\*37\.45.*\n\*\*50\.31.*\n\*\*53\.25.*\n*/, tableRows);
         }
 
-        // 3. Format download links
-        parsed = parsed.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" download class="download-link" style="color: #646cff; text-decoration: underline;">$1</a>');
-        
-        // 4. Line breaks
+        // 3. Format download links into buttons
+        // Match [Text](url) specifically looking for Download, eat newlines too
+        parsed = parsed.replace(/\n*\[(Download[^\]]+)\]\(([^)]+)\)\.?\n*/g, '<br><br><a href="$2" target="_blank" download class="download-link">$1</a><br><br>');
+
+        // 4. Format bold text (**text**)
+        parsed = parsed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+        // 5. Line breaks
         parsed = parsed.replace(/\n/g, '<br>');
-        
+
         return parsed;
     }
 
@@ -78,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
         msgDiv.className = `message ${role}`;
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
-        
+
         contentDiv.innerHTML = formatMarkdown(text);
         msgDiv.appendChild(contentDiv);
         chatHistory.appendChild(msgDiv);
@@ -90,13 +84,13 @@ document.addEventListener('DOMContentLoaded', () => {
         msgDiv.className = `message assistant loading-msg`;
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content loading';
-        
+
         let innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
         if (text) {
-             innerHTML += `<div style="margin-top: 10px; font-size: 0.9em; color: var(--text-secondary);">${text}</div>`;
+            innerHTML += `<div style="margin-top: 10px; font-size: 0.9em; color: var(--text-secondary);">${text}</div>`;
         }
         contentDiv.innerHTML = innerHTML;
-        
+
         msgDiv.appendChild(contentDiv);
         chatHistory.appendChild(msgDiv);
         scrollToBottom();
@@ -111,12 +105,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function scrollToBottom() {
         chatHistory.scrollTop = chatHistory.scrollHeight;
     }
-    
+
     // Simulate typical LLM typing/thinking delay (10s)
     function getThinkingDelay() {
         return 10000;
     }
-    
+
     // Simulate script execution delay (~20s)
     function getExecutionDelay() {
         return Math.floor(Math.random() * 2000) + 19000;
@@ -153,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ message: text, thread_id: threadId })
             });
             const data = await response.json();
-            
+
             // Artificial delay for realism
             const delay = isApproval ? getExecutionDelay() : getThinkingDelay();
             setTimeout(() => {
@@ -191,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         uploadStatus.textContent = 'Uploading...';
         uploadStatus.style.color = 'var(--text-secondary)';
-        
+
         const formData = new FormData();
         for (let i = 0; i < fileInput.files.length; i++) {
             formData.append('files', fileInput.files[i]);

@@ -84,26 +84,25 @@ def agent_node(state: AgentState):
     elif demo_step == 1:
         if "approve" in last_user_msg_lower or "yes" in last_user_msg_lower:
             demo_step = 2
-            response = AIMessage(content="Confirmed: scores differ. Example deltas (swift - open): \nRow 0: 0.000000012\nRow 1: -0.000000008\nRow 2: 0.000000015\n\nHere is the score diff file: [Download score_diffs.csv]({sandbox_dir}/score_diffs.csv).\nDo you want me to investigate further?")
+            response = AIMessage(content="Confirmed: **scores differ**.\n\nSample differences (open - swift):\n\nacc_no,swift_score,open_score,diff_open_minus_swift\n**37.454011885**,717.882,713.379,**-4.502999999999929**\n**50.313625858**,471.684,476.006,**4.321999999999946**\n**53.258943255**,436.111,435.039,**-1.0720000000000027**\n\nHere is the full score diff file: [Download score_diffs.csv]({sandbox_dir}/score_diffs.csv).\n\nDo you want me to investigate further?")
             return {"messages": [response], "requires_user_approval": False, "demo_step": demo_step}
         
     elif demo_step == 2:
         if "yes" in last_user_msg_lower or "investigate" in last_user_msg_lower:
             demo_step = 3
-            response = AIMessage(content="Next, I need per-tree leaf outputs for a small set (e.g., 10 records). May I generate tree-level scores for both pipelines?\n\nACTION: REQUIRE_APPROVAL")
+            response = AIMessage(content="Next, I need **per-tree leaf outputs** for a small set (e.g., 10 records). May I generate tree-level scores for both pipelines?\n\nACTION: REQUIRE_APPROVAL")
             return {"messages": [response], "requires_user_approval": True, "demo_step": demo_step}
 
     elif demo_step == 3:
         if "approve" in last_user_msg_lower or "yes" in last_user_msg_lower:
             demo_step = 4
-            script_code = '```python\nimport xgboost as xgb\nimport pandas as pd\n\ndef trace_decision_paths(model_path, data_path):\n    # Load XGBoost model and track tree nodes\n    model = xgb.Booster()\n    model.load_model(model_path)\n    dmatrix = xgb.DMatrix(data_path)\n    \n    # Dump path for debugging precision\n    paths = model.predict(dmatrix, pred_leaf=True)\n    pd.DataFrame(paths).to_csv("paths.csv", index=False)\n    return paths\n```'
-            response = AIMessage(content=f"Tree-level outputs generated. I'll now trace decision paths to find divergence points. \n[Download swift_tree_scores.csv]({{sandbox_dir}}/swift_tree_scores.csv) \n[Download open_source_tree_scores.csv]({{sandbox_dir}}/open_source_tree_scores.csv).\n\nI'll create a paths log comparing swift vs. open-source per tree using the following script, including the first differing node and feature value:\n\n{script_code}\n\nProceed?\n\nACTION: REQUIRE_APPROVAL")
+            response = AIMessage(content=f"Tree-level outputs generated. I'll now trace decision paths to find divergence points. \n[Download swift_tree_scores.csv]({{sandbox_dir}}/swift_tree_scores.csv) \n[Download open_source_tree_scores.csv]({{sandbox_dir}}/open_source_tree_scores.csv).\n\nI'll create a paths log comparing swift vs. open-source per tree using the following script, including the first differing node and feature value:\n\nProceed?\n\nACTION: REQUIRE_APPROVAL")
             return {"messages": [response], "requires_user_approval": True, "demo_step": demo_step}
 
     elif demo_step == 4:
         if "approve" in last_user_msg_lower or "yes" in last_user_msg_lower:
             demo_step = 5
-            response = AIMessage(content="Found divergences. The first differing split often occurs at feature X with thresholds very close to the record's value (precision-sensitive).\n\nConclusion: Path divergence seems due to precision differences (values near split thresholds) caused the score mismatch. Recommend aligning numeric precision/threshold handling between swift and open-source.\n[Download paths.csv]({sandbox_dir}/paths.csv)")
+            response = AIMessage(content="Found divergences. The first differing split often occurs at feature **product_code < (97.32688)** with thresholds very close to the record's value **97.326875726** (precision-sensitive).\n\n**Conclusion:** Path divergence seems due to **precision differences** (values near split thresholds) caused the score mismatch. Recommend aligning numeric precision/threshold handling between swift and open-source.\n[Download All Artifacts]({sandbox_dir}/paths.csv)")
             return {"messages": [response], "requires_user_approval": False, "demo_step": demo_step}
             
     if demo_step >= 5:
