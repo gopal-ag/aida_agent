@@ -1,8 +1,8 @@
 # AiDa: AI Diagnostic Agent for ML Pipelines
 
 AiDa is an interactive, locally hosted AI agent designed to troubleshoot and diagnose complex Machine Learning pipeline errors. Whether you are dealing with "JSON score mismatches" or "Model load failures," AiDa acts as a smart debugging assistant to pinpoint root causes, execute diagnostic tests, and provide code-level fixes with a secure, human-in-the-loop workflow.
-
-## 🚀 Key Features
+(before single output)
+## 🚀 Key Features 
 
 - **Smart Artifact Extraction:** AiDa correctly identifies the exact files needed to debug your specific issue based on strict signature mappings.
 - **Automated Validation:** Prevents misdiagnosis and LLM hallucination by verifying the presence and names of required files before executing any diagnostic tools.
