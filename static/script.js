@@ -41,7 +41,11 @@ document.addEventListener('DOMContentLoaded', () => {
         msgDiv.className = `message ${role}`;
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
-        contentDiv.textContent = text;
+        
+        let parsedText = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" download class="download-link" style="color: #646cff; text-decoration: underline;">$1</a>');
+        parsedText = parsedText.replace(/\n/g, '<br>');
+        
+        contentDiv.innerHTML = parsedText;
         msgDiv.appendChild(contentDiv);
         chatHistory.appendChild(msgDiv);
         scrollToBottom();

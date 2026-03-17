@@ -9,3 +9,4 @@ class AgentState(TypedDict):
     current_issue: Optional[str]
     requires_user_approval: bool
     investigation_approved: bool
+    demo_step: int

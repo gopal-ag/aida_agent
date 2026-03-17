@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List
 import os
+import shutil
 from datetime import datetime
 from langchain_core.messages import HumanMessage
 
@@ -13,6 +14,7 @@ app = FastAPI()
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/sandbox", StaticFiles(directory="sandbox"), name="sandbox")
 
 class ChatRequest(BaseModel):
     message: str
@@ -20,6 +22,49 @@ class ChatRequest(BaseModel):
 
 class ApproveRequest(BaseModel):
     thread_id: str
+
+def process_bot_response(state, thread_id: str, last_msg: str) -> dict:
+    demo_step = state.values.get("demo_step", 0)
+    sandbox_path = ""
+    sandbox_local = ""
+    if os.path.exists("sandbox"):
+        for d in os.listdir("sandbox"):
+            if thread_id in d:
+                 sandbox_path = f"/sandbox/{d}"
+                 sandbox_local = os.path.join("sandbox", d)
+                 break
+                 
+    # Copy relevant demo files to sandbox if needed
+    if demo_step == 2 and sandbox_local:
+         if not os.path.exists(os.path.join(sandbox_local, "score_diffs.csv")):
+              shutil.copy("data/score_diffs.csv", sandbox_local)
+    elif demo_step == 4 and sandbox_local:
+         if not os.path.exists(os.path.join(sandbox_local, "swift_tree_scores.csv")):
+              shutil.copy("data/swift_scores/swift_tree_scores.csv", sandbox_local)
+              shutil.copy("data/open_scores/open_source_tree_scores.csv", sandbox_local)
+    elif demo_step == 5 and sandbox_local:
+         if not os.path.exists(os.path.join(sandbox_local, "paths.csv")):
+              shutil.copy("data/paths.csv", sandbox_local)
+
+    # Check if pausing for approval
+    requires_approval = False
+    if state.next and state.next[0] == "human_approval":
+        requires_approval = True
+        
+    upload_required = "[upload_required]" in last_msg.lower()
+    
+    import re
+    display_msg = re.sub(r'(?i)\[UPLOAD_REQUIRED\]', '', last_msg).strip()
+    
+    # Replace sandbox_dir placeholders
+    if sandbox_path:
+        display_msg = display_msg.replace("{sandbox_dir}", sandbox_path)
+    
+    return {
+        "response": display_msg,
+        "requires_approval": requires_approval,
+        "upload_required": upload_required
+    }
 
 @app.get("/", response_class=HTMLResponse)
 async def get_index():
@@ -48,23 +93,8 @@ async def chat(request: ChatRequest):
         return {"response": "No response"}
         
     last_msg = messages[-1].content
-    
-    # Check if pausing for approval
-    requires_approval = False
-    if state.next and state.next[0] == "human_approval":
-        requires_approval = True
-        
-    upload_required = "[upload_required]" in last_msg.lower()
-    
-    # Clean up markers for display using case-insensitive replace
-    import re
-    display_msg = re.sub(r'(?i)\[UPLOAD_REQUIRED\]', '', last_msg).strip()
-    
-    return {
-        "response": display_msg,
-        "requires_approval": requires_approval,
-        "upload_required": upload_required
-    }
+    return process_bot_response(state, request.thread_id, last_msg)
+
 
 @app.post("/upload")
 async def upload_artifacts(thread_id: str, files: List[UploadFile] = File(...)):
@@ -120,4 +150,4 @@ async def approve_investigation(request: ApproveRequest):
     state = graph.get_state(config)
     last_msg = state.values.get("messages", [])[-1].content
     
-    return {"response": last_msg}
+    return process_bot_response(state, request.thread_id, last_msg)

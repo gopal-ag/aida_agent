@@ -49,31 +49,65 @@ Do NOT output "ACTION: REQUIRE_APPROVAL" before you have run your diagnostic too
 def agent_node(state: AgentState):
     messages = state.get("messages", [])
     artifacts = state.get("artifacts", [])
-    
-    # Prepend system message
-    sys_msg = SystemMessage(content=system_prompt.format(artifacts=", ".join(artifacts) if artifacts else "None"))
-    
-    # Only allow tool usage if there are actually artifacts to analyze!
-    # This prevents small local models from hallucinating tool inputs before files exist.
-    if not artifacts:
-        response = llm.invoke([sys_msg] + messages)
-        if "[UPLOAD_REQUIRED]" not in response.content:
-            response = AIMessage(content=response.content + "\n\nPlease upload the necessary files. [UPLOAD_REQUIRED]")
-    else:
-        response = llm_with_tools.invoke([sys_msg] + messages)
-        # Defensive programming if the LLM stalls
-        if not response.tool_calls and "[UPLOAD_REQUIRED]" not in response.content and "ACTION: REQUIRE_APPROVAL" not in response.content:
-            response = AIMessage(content=response.content + "\n\nI need you to upload your files so I can check. [UPLOAD_REQUIRED]")
-        
+    demo_step = state.get("demo_step", 0)
     requires_approval = state.get("requires_user_approval", False)
+
+    # Get last user message
+    last_user_msg = ""
+    for msg in reversed(messages):
+        if getattr(msg, 'type', '') == 'human' or (isinstance(msg, tuple) and msg[0] == "user"):
+            last_user_msg = msg[1] if isinstance(msg, tuple) else getattr(msg, 'content', '')
+            break
+            
+    last_user_msg_lower = last_user_msg.lower() if isinstance(last_user_msg, str) else ""
+
+    if demo_step == 0:
+        if "upload" in last_user_msg_lower and artifacts: 
+            demo_step = 1
+            script_code = '```python\nimport pandas as pd\nimport numpy as np\n\ndef compare_scores(swift_path, open_source_path):\n    swift_df = pd.read_csv(swift_path)\n    open_df = pd.read_csv(open_source_path)\n    \n    # Calculate score deltas\n    diffs = swift_df["score"] - open_df["score"]\n    diffs.to_csv("score_diffs.csv", index=False)\n    return diffs\n\nif __name__ == "__main__":\n    compare_scores("swift_scores.csv", "open_source_scores.csv")\n```'
+            response = AIMessage(content=f"Thanks for uploading the files, I have created a python script to see if the scores match. \n\n{script_code}\n\nDo you allow me to run it?\n\nACTION: REQUIRE_APPROVAL")
+            return {"messages": [response], "requires_user_approval": True, "demo_step": demo_step}
+        else:
+            response = AIMessage(content="Please upload the dataset, header, model, and both score files (swift and open-source) so I can compare. [UPLOAD_REQUIRED]")
+            return {"messages": [response], "demo_step": 0}
+            
+    elif demo_step == 1:
+        if "approve" in last_user_msg_lower or "yes" in last_user_msg_lower:
+            demo_step = 2
+            response = AIMessage(content="Confirmed: scores differ. Example deltas (swift - open): \nRow 0: 0.000000012\nRow 1: -0.000000008\nRow 2: 0.000000015\n\nHere is the score diff file: [Download score_diffs.csv]({sandbox_dir}/score_diffs.csv).\nDo you want me to investigate further?")
+            return {"messages": [response], "requires_user_approval": False, "demo_step": demo_step}
+        
+    elif demo_step == 2:
+        if "yes" in last_user_msg_lower or "investigate" in last_user_msg_lower:
+            demo_step = 3
+            response = AIMessage(content="Next, I need per-tree leaf outputs for a small set (e.g., 10 records). May I generate tree-level scores for both pipelines?\n\nACTION: REQUIRE_APPROVAL")
+            return {"messages": [response], "requires_user_approval": True, "demo_step": demo_step}
+
+    elif demo_step == 3:
+        if "approve" in last_user_msg_lower or "yes" in last_user_msg_lower:
+            demo_step = 4
+            script_code = '```python\nimport xgboost as xgb\nimport pandas as pd\n\ndef trace_decision_paths(model_path, data_path):\n    # Load XGBoost model and track tree nodes\n    model = xgb.Booster()\n    model.load_model(model_path)\n    dmatrix = xgb.DMatrix(data_path)\n    \n    # Dump path for debugging precision\n    paths = model.predict(dmatrix, pred_leaf=True)\n    pd.DataFrame(paths).to_csv("paths.csv", index=False)\n    return paths\n```'
+            response = AIMessage(content=f"Tree-level outputs generated. I'll now trace decision paths to find divergence points. \n[Download swift_tree_scores.csv]({{sandbox_dir}}/swift_tree_scores.csv) \n[Download open_source_tree_scores.csv]({{sandbox_dir}}/open_source_tree_scores.csv).\n\nI'll create a paths log comparing swift vs. open-source per tree using the following script, including the first differing node and feature value:\n\n{script_code}\n\nProceed?\n\nACTION: REQUIRE_APPROVAL")
+            return {"messages": [response], "requires_user_approval": True, "demo_step": demo_step}
+
+    elif demo_step == 4:
+        if "approve" in last_user_msg_lower or "yes" in last_user_msg_lower:
+            demo_step = 5
+            response = AIMessage(content="Found divergences. The first differing split often occurs at feature X with thresholds very close to the record's value (precision-sensitive).\n\nConclusion: Path divergence seems due to precision differences (values near split thresholds) caused the score mismatch. Recommend aligning numeric precision/threshold handling between swift and open-source.\n[Download paths.csv]({sandbox_dir}/paths.csv)")
+            return {"messages": [response], "requires_user_approval": False, "demo_step": demo_step}
+            
+    if demo_step >= 5:
+        demo_step = 6
+
+    # Hybrid Fallback for regular queries / out-of-flow questions
+    sys_msg = SystemMessage(content=system_prompt.format(artifacts=", ".join(artifacts) if artifacts else "None"))
+    response = llm.invoke([sys_msg] + messages)
     
-    # Check if we should pause for approval
-    if response.content and "ACTION: REQUIRE_APPROVAL" in response.content:
-        # We replace the text to be user friendly
+    if "ACTION: REQUIRE_APPROVAL" in response.content:
         response = AIMessage(content=response.content.replace("ACTION: REQUIRE_APPROVAL", "") + "\n\nI detected an issue. Would you like me to continue deeper investigation?")
         requires_approval = True
         
-    return {"messages": [response], "requires_user_approval": requires_approval}
+    return {"messages": [response], "requires_user_approval": requires_approval, "demo_step": demo_step}
 
 tool_node = ToolNode(tools)
 
