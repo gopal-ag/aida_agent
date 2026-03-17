@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Diagnostic Agent</title>
     <link rel="stylesheet" href="/static/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -24,26 +24,29 @@
                     <div class="message-content">Hello! I'm AiDa, your ML diagnostic assistant. Describe the issue you're facing.</div>
                 </div>
             </div>
-            
-            <div id="upload-panel" class="upload-panel hidden">
-                <div class="upload-header">
-                    <i class="fa-solid fa-file-arrow-up"></i>
-                    <span>Upload Requested Artifacts</span>
+            <div class="panels-container">
+                <div id="upload-panel" class="upload-panel hidden">
+                    <div class="upload-header">
+                        <i class="fa-solid fa-file-arrow-up"></i>
+                        <span>Upload Requested Artifacts</span>
+                    </div>
+                    <div class="upload-controls">
+                        <input type="file" id="file-input" multiple>
+                        <div class="upload-actions">
+                            <button id="upload-btn" class="btn btn-secondary">Upload Files</button>
+                            <button id="cancel-upload-btn" class="btn btn-tertiary">Cancel</button>
+                        </div>
+                    </div>
+                    <div id="upload-status" class="status-message"></div>
                 </div>
-                <input type="file" id="file-input" multiple>
-                <div class="upload-actions">
-                    <button id="upload-btn" class="btn btn-secondary">Upload Files</button>
-                    <button id="cancel-upload-btn" class="btn btn-tertiary">Cancel</button>
-                </div>
-                <div id="upload-status" class="status-message"></div>
-            </div>
 
-            <div id="approval-panel" class="approval-panel hidden">
-                <div class="approval-header">
-                    <i class="fa-solid fa-triangle-exclamation icon-warning"></i>
-                    <span>I've detected a potential issue. Shall I investigate deeply?</span>
+                <div id="approval-panel" class="approval-panel hidden">
+                    <div class="approval-header">
+                        <i class="fa-solid fa-triangle-exclamation icon-warning"></i>
+                        <span>I've detected a potential issue. Shall I investigate deeply?</span>
+                    </div>
+                    <button id="approve-btn" class="btn btn-primary">Approve Investigation</button>
                 </div>
-                <button id="approve-btn" class="btn btn-primary">Approve Investigation</button>
             </div>
 
             <div class="input-area">
