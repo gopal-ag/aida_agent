@@ -36,27 +36,67 @@ document.addEventListener('DOMContentLoaded', () => {
 
     sendBtn.addEventListener('click', sendMessage);
 
+    function formatMarkdown(text) {
+        // Simple markdown parsing for the demo
+        
+        // 1. Format code blocks
+        let parsed = text.replace(/```([\s\S]*?)```/g, function(match, code) {
+            // Strip language identifier if present on first line
+            let codeContent = code.replace(/^[a-z]+\n/, ''); 
+            return `<pre><code>${codeContent}</code></pre>`;
+        });
+
+        // 2. Format CSV-like table for the exact diff response
+        if (parsed.includes("acc_no,swift_score,open_score,diff_open_minus_swift")) {
+            const tableRows = `
+                <table class="data-table">
+                    <thead>
+                        <tr><th>acc_no</th><th>swift_score</th><th>open_score</th><th>diff_open_minus_swift</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>37.454011885</td><td>717.882</td><td>713.379</td><td>-4.502999999999929</td></tr>
+                        <tr><td>50.313625858</td><td>471.684</td><td>476.006</td><td>4.321999999999946</td></tr>
+                        <tr><td>53.258943255</td><td>436.111</td><td>435.039</td><td>-1.0720000000000027</td></tr>
+                    </tbody>
+                </table>
+            `;
+            // Replace the hardcoded raw text with the table representation
+            parsed = parsed.replace(/Example deltas[\s\S]*?(?=\n\nHere is)/, `Example deltas:\n${tableRows}`);
+        }
+
+        // 3. Format download links
+        parsed = parsed.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" download class="download-link" style="color: #646cff; text-decoration: underline;">$1</a>');
+        
+        // 4. Line breaks
+        parsed = parsed.replace(/\n/g, '<br>');
+        
+        return parsed;
+    }
+
     function appendMessage(role, text) {
         const msgDiv = document.createElement('div');
         msgDiv.className = `message ${role}`;
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
         
-        let parsedText = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" download class="download-link" style="color: #646cff; text-decoration: underline;">$1</a>');
-        parsedText = parsedText.replace(/\n/g, '<br>');
-        
-        contentDiv.innerHTML = parsedText;
+        contentDiv.innerHTML = formatMarkdown(text);
         msgDiv.appendChild(contentDiv);
         chatHistory.appendChild(msgDiv);
         scrollToBottom();
     }
 
-    function appendLoading() {
+    function appendLoading(text = null) {
         const msgDiv = document.createElement('div');
         msgDiv.className = `message assistant loading-msg`;
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content loading';
-        contentDiv.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+        
+        let innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+        if (text) {
+             innerHTML += `<div style="margin-top: 10px; font-size: 0.9em; color: var(--text-secondary);">${text}</div>`;
+        }
+        contentDiv.innerHTML = innerHTML;
+        
         msgDiv.appendChild(contentDiv);
         chatHistory.appendChild(msgDiv);
         scrollToBottom();
@@ -71,9 +111,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function scrollToBottom() {
         chatHistory.scrollTop = chatHistory.scrollHeight;
     }
+    
+    // Simulate typical LLM typing/thinking delay (10s)
+    function getThinkingDelay() {
+        return 10000;
+    }
+    
+    // Simulate script execution delay (~20s)
+    function getExecutionDelay() {
+        return Math.floor(Math.random() * 2000) + 19000;
+    }
 
-    async function sendMessage() {
-        const text = chatInput.value.trim();
+    async function sendMessage(overrideText = null, isApproval = false) {
+        const text = overrideText || chatInput.value.trim();
         if (!text) return;
 
         // Hide panels on new message
@@ -81,13 +131,22 @@ document.addEventListener('DOMContentLoaded', () => {
         approvalPanel.classList.add('hidden');
 
         appendMessage('user', text);
-        chatInput.value = '';
-        chatInput.style.height = 'auto';
-        sendBtn.setAttribute('disabled', 'true');
+        if (!overrideText) {
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            sendBtn.setAttribute('disabled', 'true');
+        }
 
-        const loadingMarker = appendLoading();
+        if (isApproval) {
+            appendLoading("Executing script in sandbox environment...");
+        } else {
+            appendLoading("AiDa is thinking...");
+        }
 
         try {
+            // Note: If it's an approval, we just send it as a regular chat message 
+            // since the agent state machine advances when "yes" or "approve" is in chat.
+            // Sending to /approve was interrupting the linear chat flow causing duplicates.
             const response = await fetch('/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -95,18 +154,22 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await response.json();
             
-            removeLoading();
-            appendMessage('assistant', data.response);
+            // Artificial delay for realism
+            const delay = isApproval ? getExecutionDelay() : getThinkingDelay();
+            setTimeout(() => {
+                removeLoading();
+                appendMessage('assistant', data.response);
 
-            if (data.upload_required) {
-                uploadPanel.classList.remove('hidden');
-                uploadStatus.textContent = '';
-                fileInput.value = '';
-            }
+                if (data.upload_required) {
+                    uploadPanel.classList.remove('hidden');
+                    uploadStatus.textContent = '';
+                    fileInput.value = '';
+                }
 
-            if (data.requires_approval) {
-                approvalPanel.classList.remove('hidden');
-            }
+                if (data.requires_approval) {
+                    approvalPanel.classList.remove('hidden');
+                }
+            }, delay);
 
         } catch (error) {
             removeLoading();
@@ -146,8 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => {
                     uploadPanel.classList.add('hidden');
                     // Auto trigger chat so agent processes artifacts
-                    chatInput.value = "I've uploaded the requested artifacts. Please run your diagnostic tools now.";
-                    sendMessage();
+                    sendMessage("I've uploaded the requested artifacts. Please run your diagnostic tools now.", false);
                 }, 1000);
             } else {
                 uploadStatus.textContent = 'Upload failed.';
@@ -160,24 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Approval functionality
-    approveBtn.addEventListener('click', async () => {
-        approvalPanel.classList.add('hidden');
-        appendMessage('user', 'Yes, approved.');
-        const loadingMarker = appendLoading();
-
-        try {
-            const response = await fetch('/approve', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ thread_id: threadId })
-            });
-            const data = await response.json();
-            
-            removeLoading();
-            appendMessage('assistant', data.response);
-        } catch (error) {
-            removeLoading();
-            appendMessage('assistant', 'Error handling approval.');
-        }
+    approveBtn.addEventListener('click', () => {
+        sendMessage("Yes, approved.", true);
     });
 });

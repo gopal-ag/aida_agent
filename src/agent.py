@@ -62,13 +62,23 @@ def agent_node(state: AgentState):
     last_user_msg_lower = last_user_msg.lower() if isinstance(last_user_msg, str) else ""
 
     if demo_step == 0:
-        if "upload" in last_user_msg_lower and artifacts: 
-            demo_step = 1
-            script_code = '```python\nimport pandas as pd\nimport numpy as np\n\ndef compare_scores(swift_path, open_source_path):\n    swift_df = pd.read_csv(swift_path)\n    open_df = pd.read_csv(open_source_path)\n    \n    # Calculate score deltas\n    diffs = swift_df["score"] - open_df["score"]\n    diffs.to_csv("score_diffs.csv", index=False)\n    return diffs\n\nif __name__ == "__main__":\n    compare_scores("swift_scores.csv", "open_source_scores.csv")\n```'
-            response = AIMessage(content=f"Thanks for uploading the files, I have created a python script to see if the scores match. \n\n{script_code}\n\nDo you allow me to run it?\n\nACTION: REQUIRE_APPROVAL")
-            return {"messages": [response], "requires_user_approval": True, "demo_step": demo_step}
+        if "upload" in last_user_msg_lower and artifacts:
+            # Validate 4 files
+            has_dataset = any("dataset" in f.lower() or "data" in f.lower() for f in artifacts)
+            has_header = any("header" in f.lower() for f in artifacts)
+            has_model = any("model" in f.lower() or "json" in f.lower() for f in artifacts)
+            has_scores = sum(1 for f in artifacts if "score" in f.lower()) >= 2
+            
+            if len(artifacts) >= 4 and has_model: 
+                demo_step = 1
+                script_code = '```python\nimport pandas as pd\nimport numpy as np\n\ndef compare_scores(swift_path, open_source_path):\n    swift_df = pd.read_csv(swift_path)\n    open_df = pd.read_csv(open_source_path)\n    \n    # Calculate score deltas\n    diffs = swift_df["score"] - open_df["score"]\n    diffs.to_csv("score_diffs.csv", index=False)\n    return diffs\n\nif __name__ == "__main__":\n    compare_scores("swift_scores.csv", "open_source_scores.csv")\n```'
+                response = AIMessage(content=f"Thanks for uploading the files, I have created a python script to see if the scores match. \n\n{script_code}\n\nDo you allow me to run it?\n\nACTION: REQUIRE_APPROVAL")
+                return {"messages": [response], "requires_user_approval": True, "demo_step": demo_step}
+            else:
+                response = AIMessage(content="I see some files, but I need all of them to proceed. Please ensure you upload the dataset, header, model, and both score files (swift and open-source). [UPLOAD_REQUIRED]")
+                return {"messages": [response], "demo_step": 0}
         else:
-            response = AIMessage(content="Please upload the dataset, header, model, and both score files (swift and open-source) so I can compare. [UPLOAD_REQUIRED]")
+            response = AIMessage(content="Please upload the following files so I can compare:\n\n- Dataset file (e.g. data.csv)\n- Header file (e.g. header.csv)\n- XGBoost Model file (e.g. model.json)\n- Swift pipeline scores\n- Open-source pipeline scores (e.g. swift_scores.csv, open_source_scores.csv)\n\n[UPLOAD_REQUIRED]")
             return {"messages": [response], "demo_step": 0}
             
     elif demo_step == 1:
