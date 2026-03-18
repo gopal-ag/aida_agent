@@ -65,7 +65,7 @@ def agent_node(state: AgentState):
     last_user_msg_lower = last_user_msg.lower() if isinstance(last_user_msg, str) else ""
 
     if demo_step == -1:
-        if any(word in last_user_msg_lower for word in ["score", "scoring", "mismatch", "missmatch", "missmatach"]):
+        if any(word in last_user_msg_lower for word in ["score", "scoring", "mismatch", "missmatch", "missmatach", "miss"]):
             demo_step = 0
 
     if demo_step == 0:

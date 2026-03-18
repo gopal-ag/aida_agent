@@ -1,63 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Diagnostic Agent</title>
-    <link rel="stylesheet" href="/static/styles.css?v=2">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css?v=3">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
+
 <body>
     <div class="app-container">
         <header class="app-header">
             <div class="header-title">
-                <img src="/static/logo.png" alt="AiDa Logo" class="aida-logo" style="max-height: 28px; width: auto;">
+                <img src="/static/logo.png" alt="AiDa Logo" class="aida-logo">
                 <h1>AiDa Diagnostic Agent</h1>
             </div>
-            <p class="subtitle">Advanced ML debugging and root cause analysis.</p>
+            <div class="subtitle">Advanced ML debugging and root cause analysis</div>
         </header>
 
         <main class="chat-container">
             <div id="chat-history" class="chat-history">
                 <div class="message assistant">
-                    <div class="message-content">Hello! I'm AiDa, your ML diagnostic assistant. Describe the issue you're facing.</div>
+                    <div class="avatar-wrapper"><img src="/static/logo.png" alt="AiDa"></div>
+                    <div class="message-content">Hello! I'm AiDa, your ML diagnostic assistant. Describe the issue
+                        you're facing.</div>
                 </div>
             </div>
-            <div class="panels-container">
-                <div id="upload-panel" class="upload-panel hidden">
-                    <div class="upload-header">
-                        <i class="fa-solid fa-file-arrow-up"></i>
-                        <span>Upload Requested Artifacts</span>
-                    </div>
-                    <div class="upload-controls">
-                        <input type="file" id="file-input" multiple>
-                        <div class="upload-actions">
-                            <button id="upload-btn" class="btn btn-secondary">Upload Files</button>
-                            <button id="cancel-upload-btn" class="btn btn-tertiary">Cancel</button>
+
+            <div class="input-container-wrapper">
+                <div class="panels-container">
+                    <div id="upload-panel" class="upload-panel hidden">
+                        <div class="upload-header">
+                            <i class="fa-solid fa-file-arrow-up"></i>
+                            <span>Upload Requested Artifacts</span>
                         </div>
+                        <div class="upload-controls">
+                            <input type="file" id="file-input" multiple>
+                            <div class="upload-actions">
+                                <button id="upload-btn" class="btn btn-primary">Upload Files</button>
+                                <button id="cancel-upload-btn" class="btn btn-secondary">Cancel</button>
+                            </div>
+                        </div>
+                        <div id="upload-status" class="status-message"></div>
                     </div>
-                    <div id="upload-status" class="status-message"></div>
+
+                    <div id="approval-panel" class="approval-panel hidden">
+                        <div class="approval-header">
+                            <i class="fa-solid fa-triangle-exclamation icon-warning"></i>
+                            <span>I've detected a potential issue. Shall I investigate deeply?</span>
+                        </div>
+                        <button id="approve-btn" class="btn btn-primary">Approve Investigation</button>
+                    </div>
                 </div>
 
-                <div id="approval-panel" class="approval-panel hidden">
-                    <div class="approval-header">
-                        <i class="fa-solid fa-triangle-exclamation icon-warning"></i>
-                        <span>I've detected a potential issue. Shall I investigate deeply?</span>
-                    </div>
-                    <button id="approve-btn" class="btn btn-primary">Approve Investigation</button>
+                <div class="input-area">
+                    <textarea id="chat-input" placeholder="Message AiDa... (e.g. JSON model score mismatch)"
+                        rows="1"></textarea>
+                    <button id="send-btn" class="btn btn-primary btn-icon" disabled>
+                        <i class="fa-solid fa-arrow-up"></i>
+                    </button>
                 </div>
-            </div>
-
-            <div class="input-area">
-                <textarea id="chat-input" placeholder="Type your issue here... (e.g. JSON model score mismatch)" rows="1"></textarea>
-                <button id="send-btn" class="btn btn-primary btn-icon" disabled>
-                    <i class="fa-solid fa-paper-plane"></i>
-                </button>
+                <div class="footer-text">AiDa Diagnostic Agent may produce inaccurate results. Verify outputs.</div>
             </div>
         </main>
     </div>
-    
+
     <script src="/static/script.js"></script>
 </body>
+
 </html>

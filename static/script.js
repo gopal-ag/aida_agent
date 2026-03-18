@@ -70,6 +70,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function appendMessage(role, text) {
         const msgDiv = document.createElement('div');
         msgDiv.className = `message ${role}`;
+
+        if (role === 'assistant') {
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = 'avatar-wrapper';
+            avatarDiv.innerHTML = '<img src="/static/logo.png" alt="AiDa">';
+            msgDiv.appendChild(avatarDiv);
+        }
+
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
 
@@ -79,15 +87,27 @@ document.addEventListener('DOMContentLoaded', () => {
         scrollToBottom();
     }
 
-    function appendLoading(text = null) {
+    function appendLoading(text = null, type = 'thinking') {
         const msgDiv = document.createElement('div');
         msgDiv.className = `message assistant loading-msg`;
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'message-content loading';
 
-        let innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+        const avatarDiv = document.createElement('div');
+        avatarDiv.className = 'avatar-wrapper';
+        avatarDiv.innerHTML = '<img src="/static/logo.png" alt="AiDa">';
+        msgDiv.appendChild(avatarDiv);
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = `message-content loading ${type}`;
+
+        let innerHTML = '';
+        if (type === 'thinking') {
+            innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+        } else if (type === 'execution') {
+            innerHTML = '<div class="spinner-wheel"></div>';
+        }
+
         if (text) {
-            innerHTML += `<div style="margin-top: 10px; font-size: 0.9em; color: var(--text-secondary);">${text}</div>`;
+            innerHTML += `<div style="${type === 'thinking' ? 'margin-top: 10px; ' : ''}font-size: 0.9em; color: var(--text-secondary);">${text}</div>`;
         }
         contentDiv.innerHTML = innerHTML;
 
@@ -108,12 +128,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Simulate typical LLM typing/thinking delay (10s)
     function getThinkingDelay() {
-        return Math.floor(Math.random() * 3000) + 15000;
+        return Math.floor(Math.random() * 2000) + 4000;
     }
 
     // Simulate script execution delay (~20s)
     function getExecutionDelay() {
-        return Math.floor(Math.random() * 5000) + 25000;
+        return Math.floor(Math.random() * 3000) + 10000;
     }
 
     async function sendMessage(overrideText = null, isApproval = false) {
@@ -123,6 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Hide panels on new message
         uploadPanel.classList.add('hidden');
         approvalPanel.classList.add('hidden');
+        chatHistory.classList.remove('with-panels');
 
         appendMessage('user', text);
         if (!overrideText) {
@@ -132,9 +153,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (isApproval) {
-            appendLoading("Executing script in sandbox environment...");
+            appendLoading("Executing script in sandbox environment...", "execution");
         } else {
-            appendLoading("AiDa is thinking...");
+            appendLoading("AiDa is thinking...", "thinking");
         }
 
         try {
@@ -156,13 +177,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (data.upload_required) {
                     uploadPanel.classList.remove('hidden');
+                    chatHistory.classList.add('with-panels');
                     uploadStatus.textContent = '';
                     fileInput.value = '';
                 }
 
                 if (data.requires_approval) {
                     approvalPanel.classList.remove('hidden');
+                    chatHistory.classList.add('with-panels');
                 }
+                setTimeout(scrollToBottom, 50); // Small delay to let UI shift before scrolling
             }, delay);
 
         } catch (error) {
@@ -174,6 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Upload functionality
     cancelUploadBtn.addEventListener('click', () => {
         uploadPanel.classList.add('hidden');
+        chatHistory.classList.remove('with-panels');
     });
 
     uploadBtn.addEventListener('click', async () => {
