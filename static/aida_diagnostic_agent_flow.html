@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AiDa Diagnostic Agent — System Flow</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161e;
+    --border: rgba(255,255,255,0.08);
+    --text-primary: #e8eaf0;
+    --text-secondary: #8890a4;
+    --purple-light: #a89df4;
+    --purple-mid: #7F77DD;
+    --purple-dark: #3C3489;
+    --teal-light: #5DCAA5;
+    --teal-mid: #1D9E75;
+    --blue-light: #85B7EB;
+    --blue-mid: #378ADD;
+    --amber-light: #FAC775;
+    --amber-mid: #EF9F27;
+    --pink-light: #ED93B1;
+    --pink-mid: #D4537E;
+    --gray-mid: #888780;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px 64px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+    max-width: 680px;
+  }
+
+  .badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--teal-mid);
+    border: 1px solid rgba(29,158,117,0.35);
+    border-radius: 4px;
+    padding: 4px 12px;
+    margin-bottom: 16px;
+    background: rgba(29,158,117,0.06);
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    margin-bottom: 10px;
+  }
+
+  h1 span {
+    color: var(--teal-light);
+  }
+
+  .subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .diagram-wrap {
+    width: 100%;
+    max-width: 800px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px 24px;
+    overflow-x: auto;
+  }
+
+  svg text {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .node { cursor: pointer; }
+  .node:hover rect, .node:hover polygon { filter: brightness(1.12); }
+
+  .layer-label {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+    opacity: 0.75;
+  }
+
+  footer {
+    margin-top: 40px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-secondary);
+    opacity: 0.5;
+    letter-spacing: 0.06em;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge">SYSTEM ARCHITECTURE</div>
+  <h1>AiDa <span>Diagnostic Agent</span></h1>
+  <p class="subtitle">End-to-end pipeline — from user problem intake to root cause synthesis</p>
+</header>
+
+<div class="diagram-wrap">
+<svg width="100%" viewBox="0 0 740 1100" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+  <style>
+    .t  { font-family:'Inter',sans-serif; font-size:14px; font-weight:400; fill:#e8eaf0; }
+    .ts { font-family:'Inter',sans-serif; font-size:12px; font-weight:400; fill:#8890a4; }
+    .th { font-family:'Inter',sans-serif; font-size:14px; font-weight:500; fill:#e8eaf0; }
+    .mono { font-family:'JetBrains Mono',monospace; font-size:11px; fill:#8890a4; letter-spacing:0.06em; }
+    .arr { stroke:#8890a4; stroke-width:1; fill:none; }
+    .node { cursor:pointer; }
+    .node:hover > rect, .node:hover > polygon { opacity:0.85; }
+
+    /* Purple — Frontend */
+    .c-purple rect, .c-purple ellipse { fill:#1e1b3a; stroke:#534AB7; stroke-width:0.5; }
+    .c-purple .th { fill:#a89df4; }
+    .c-purple .ts { fill:#7F77DD; }
+
+    /* Teal — Intake / LangGraph */
+    .c-teal rect { fill:#0d2820; stroke:#0F6E56; stroke-width:0.5; }
+    .c-teal .th { fill:#5DCAA5; }
+    .c-teal .ts { fill:#1D9E75; }
+
+    /* Blue — Artifacts */
+    .c-blue rect { fill:#0c1e36; stroke:#185FA5; stroke-width:0.5; }
+    .c-blue .th { fill:#85B7EB; }
+    .c-blue .ts { fill:#378ADD; }
+
+    /* Amber — Diagnostics */
+    .c-amber rect { fill:#261a00; stroke:#854F0B; stroke-width:0.5; }
+    .c-amber .th { fill:#FAC775; }
+    .c-amber .ts { fill:#EF9F27; }
+
+    /* Pink — Approval */
+    .c-pink rect { fill:#260d18; stroke:#993556; stroke-width:0.5; }
+    .c-pink .th { fill:#ED93B1; }
+    .c-pink .ts { fill:#D4537E; }
+
+    /* Gray — Neutral */
+    .c-gray rect { fill:#1a1a18; stroke:#5F5E5A; stroke-width:0.5; }
+    .c-gray .th { fill:#B4B2A9; }
+    .c-gray .ts { fill:#888780; }
+
+    /* Diamond (anomaly) */
+    .diamond { fill:#1a0d18; stroke:#993556; stroke-width:1; }
+    .diamond-text-main { font-family:'Inter',sans-serif; font-size:13px; font-weight:500; fill:#ED93B1; }
+    .diamond-text-sub  { font-family:'JetBrains Mono',monospace; font-size:10px; fill:#993556; }
+  </style>
+</defs>
+
+<!-- ── LAYER LABELS ── -->
+<text class="mono" x="22" y="96"  text-anchor="middle" transform="rotate(-90,22,96)"  fill="#534AB7">FRONTEND</text>
+<text class="mono" x="22" y="270" text-anchor="middle" transform="rotate(-90,22,270)" fill="#0F6E56">INTAKE</text>
+<text class="mono" x="22" y="450" text-anchor="middle" transform="rotate(-90,22,450)" fill="#185FA5">ARTIFACTS</text>
+<text class="mono" x="22" y="640" text-anchor="middle" transform="rotate(-90,22,640)" fill="#854F0B">DIAGNOSTICS</text>
+<text class="mono" x="22" y="840" text-anchor="middle" transform="rotate(-90,22,840)" fill="#993556">APPROVAL</text>
+<text class="mono" x="22" y="1010" text-anchor="middle" transform="rotate(-90,22,1010)" fill="#0F6E56">OUTPUT</text>
+
+<!-- ══════════════════════════════════
+     ROW 1 — User / Chat UI / FastAPI
+══════════════════════════════════ -->
+
+<g class="node c-purple">
+  <rect x="48" y="48" width="140" height="56" rx="8"/>
+  <text class="th" x="118" y="70" text-anchor="middle" dominant-baseline="central">User</text>
+  <text class="ts" x="118" y="88" text-anchor="middle" dominant-baseline="central">Types problem</text>
+</g>
+
+<g class="node c-purple">
+  <rect x="228" y="48" width="190" height="56" rx="8"/>
+  <text class="th" x="323" y="70" text-anchor="middle" dominant-baseline="central">Chat UI</text>
+  <text class="ts" x="323" y="88" text-anchor="middle" dominant-baseline="central">static/index.html</text>
+</g>
+
+<g class="node c-purple">
+  <rect x="460" y="48" width="190" height="56" rx="8"/>
+  <text class="th" x="555" y="70" text-anchor="middle" dominant-baseline="central">FastAPI backend</text>
+  <text class="ts" x="555" y="88" text-anchor="middle" dominant-baseline="central">Web server + endpoints</text>
+</g>
+
+<line x1="188" y1="76" x2="226" y2="76" class="arr" stroke="#534AB7" marker-end="url(#arrow)"/>
+<line x1="418" y1="76" x2="458" y2="76" class="arr" stroke="#534AB7" marker-end="url(#arrow)"/>
+
+<!-- ══════════════════════════════════
+     ROW 2 — LangGraph + Ollama + Library
+══════════════════════════════════ -->
+
+<line x1="555" y1="104" x2="555" y2="144" class="arr" stroke="#1D9E75" marker-end="url(#arrow)"/>
+<line x1="555" y1="144" x2="352" y2="144" stroke="#1D9E75" stroke-width="1" fill="none" marker-end="url(#arrow)"/>
+
+<g class="node c-teal">
+  <rect x="48" y="156" width="200" height="56" rx="8"/>
+  <text class="th" x="148" y="177" text-anchor="middle" dominant-baseline="central">LangGraph</text>
+  <text class="ts" x="148" y="195" text-anchor="middle" dominant-baseline="central">Orchestration state machine</text>
+</g>
+
+<g class="node c-teal">
+  <rect x="278" y="156" width="190" height="56" rx="8"/>
+  <text class="th" x="373" y="177" text-anchor="middle" dominant-baseline="central">Ollama / llama3.2</text>
+  <text class="ts" x="373" y="195" text-anchor="middle" dominant-baseline="central">Local LLM backbone</text>
+</g>
+
+<g class="node c-teal">
+  <rect x="498" y="156" width="162" height="56" rx="8"/>
+  <text class="th" x="579" y="177" text-anchor="middle" dominant-baseline="central">Diagnostics lib</text>
+  <text class="ts" x="579" y="195" text-anchor="middle" dominant-baseline="central">JSON/YAML registry</text>
+</g>
+
+<line x1="148" y1="156" x2="276" y2="178" class="arr" stroke="#1D9E75" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
+<line x1="476" y1="184" x2="498" y2="184" class="arr" stroke="#1D9E75" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
+
+<!-- ══════════════════════════════════
+     STAGE ① Problem intake (full-width)
+══════════════════════════════════ -->
+
+<line x1="148" y1="212" x2="148" y2="252" class="arr" stroke="#1D9E75" marker-end="url(#arrow)"/>
+<line x1="148" y1="252" x2="360" y2="252" stroke="#1D9E75" stroke-width="1" fill="none"/>
+<line x1="360" y1="252" x2="360" y2="265" class="arr" stroke="#1D9E75" marker-end="url(#arrow)"/>
+
+<g class="node c-teal">
+  <rect x="48" y="265" width="610" height="62" rx="10"/>
+  <text class="th" x="353" y="286" text-anchor="middle" dominant-baseline="central">① Problem intake</text>
+  <text class="ts" x="353" y="308" text-anchor="middle" dominant-baseline="central">LLM classifies free text → structured JSON: problem_type + confidence_score</text>
+</g>
+
+<!-- ══════════════════════════════════
+     STAGE ② Artifact extraction
+══════════════════════════════════ -->
+
+<line x1="353" y1="327" x2="353" y2="360" class="arr" stroke="#378ADD" marker-end="url(#arrow)"/>
+
+<g class="node c-blue">
+  <rect x="48" y="360" width="610" height="62" rx="10"/>
+  <text class="th" x="353" y="381" text-anchor="middle" dominant-baseline="central">② Artifact extraction</text>
+  <text class="ts" x="353" y="401" text-anchor="middle" dominant-baseline="central">Strict prompt maps issue → required files; emits hidden [UPLOAD_REQUIRED] tag</text>
+</g>
+
+<!-- ══════════════════════════════════
+     STAGE ③ Upload + Validation
+══════════════════════════════════ -->
+
+<line x1="353" y1="422" x2="353" y2="456" class="arr" stroke="#378ADD" marker-end="url(#arrow)"/>
+
+<g class="node c-blue">
+  <rect x="48" y="456" width="280" height="62" rx="10"/>
+  <text class="th" x="188" y="477" text-anchor="middle" dominant-baseline="central">/upload endpoint</text>
+  <text class="ts" x="188" y="497" text-anchor="middle" dominant-baseline="central">UI detects tag; user uploads files</text>
+</g>
+
+<g class="node c-blue">
+  <rect x="378" y="456" width="280" height="62" rx="10"/>
+  <text class="th" x="518" y="477" text-anchor="middle" dominant-baseline="central">③ Artifact validation</text>
+  <text class="ts" x="518" y="497" text-anchor="middle" dominant-baseline="central">Names verified; stored in sandboxed dir</text>
+</g>
+
+<line x1="328" y1="487" x2="376" y2="487" class="arr" stroke="#378ADD" marker-end="url(#arrow)"/>
+
+<!-- ══════════════════════════════════
+     STAGE ④ Tool execution header
+══════════════════════════════════ -->
+
+<line x1="518" y1="518" x2="518" y2="548" stroke="#EF9F27" stroke-width="1" fill="none"/>
+<line x1="518" y1="548" x2="353" y2="548" stroke="#EF9F27" stroke-width="1" fill="none"/>
+<line x1="353" y1="548" x2="353" y2="566" class="arr" stroke="#EF9F27" marker-end="url(#arrow)"/>
+
+<g class="node c-amber">
+  <rect x="48" y="566" width="610" height="44" rx="8"/>
+  <text class="th" x="353" y="592" text-anchor="middle" dominant-baseline="central">④ Tool execution — LangGraph runs diagnostic tools in sequence</text>
+</g>
+
+<!-- 4 tool boxes -->
+<g class="node c-amber">
+  <rect x="48" y="628" width="136" height="58" rx="8"/>
+  <text class="th" x="116" y="649" text-anchor="middle" dominant-baseline="central">validate_schema</text>
+  <text class="ts" x="116" y="668" text-anchor="middle" dominant-baseline="central">Column structure</text>
+</g>
+
+<g class="node c-amber">
+  <rect x="200" y="628" width="120" height="58" rx="8"/>
+  <text class="th" x="260" y="649" text-anchor="middle" dominant-baseline="central">score_model</text>
+  <text class="ts" x="260" y="668" text-anchor="middle" dominant-baseline="central">Prediction batch</text>
+</g>
+
+<g class="node c-amber">
+  <rect x="336" y="628" width="138" height="58" rx="8"/>
+  <text class="th" x="405" y="649" text-anchor="middle" dominant-baseline="central">test_model_load</text>
+  <text class="ts" x="405" y="668" text-anchor="middle" dominant-baseline="central">Load + parse model</text>
+</g>
+
+<g class="node c-amber">
+  <rect x="490" y="628" width="168" height="58" rx="8"/>
+  <text class="th" x="574" y="649" text-anchor="middle" dominant-baseline="central">compare_pipelines</text>
+  <text class="ts" x="574" y="668" text-anchor="middle" dominant-baseline="central">Feature alignment</text>
+</g>
+
+<!-- connectors from header to tools -->
+<line x1="116" y1="610" x2="116" y2="626" class="arr" stroke="#EF9F27" marker-end="url(#arrow)"/>
+<line x1="260" y1="610" x2="260" y2="626" class="arr" stroke="#EF9F27" marker-end="url(#arrow)"/>
+<line x1="405" y1="610" x2="405" y2="626" class="arr" stroke="#EF9F27" marker-end="url(#arrow)"/>
+<line x1="574" y1="610" x2="574" y2="626" class="arr" stroke="#EF9F27" marker-end="url(#arrow)"/>
+
+<!-- ══════════════════════════════════
+     ANOMALY DIAMOND
+══════════════════════════════════ -->
+
+<line x1="353" y1="686" x2="353" y2="720" class="arr" stroke="#D4537E" marker-end="url(#arrow)"/>
+
+<polygon class="diamond" points="353,730 456,772 353,814 250,772"/>
+<text class="diamond-text-main" x="353" y="766" text-anchor="middle" dominant-baseline="central">Anomaly?</text>
+<text class="diamond-text-sub"  x="353" y="783" text-anchor="middle" dominant-baseline="central">ACTION:REQUIRE_APPROVAL</text>
+
+<!-- No branch -->
+<line x1="456" y1="772" x2="568" y2="772" stroke="#5F5E5A" stroke-width="1" fill="none" marker-end="url(#arrow)"/>
+<text class="ts" x="510" y="762" text-anchor="middle">No</text>
+
+<g class="node c-gray">
+  <rect x="568" y="748" width="90" height="48" rx="8"/>
+  <text class="th" x="613" y="768" text-anchor="middle" dominant-baseline="central">Skip</text>
+  <text class="ts" x="613" y="785" text-anchor="middle" dominant-baseline="central">Proceed direct</text>
+</g>
+
+<!-- Yes branch down -->
+<line x1="353" y1="814" x2="353" y2="856" class="arr" stroke="#D4537E" marker-end="url(#arrow)"/>
+<text class="ts" x="325" y="840" text-anchor="middle">Yes</text>
+
+<!-- ══════════════════════════════════
+     STAGE ⑤ Approval
+══════════════════════════════════ -->
+
+<g class="node c-pink">
+  <rect x="48" y="856" width="270" height="62" rx="10"/>
+  <text class="th" x="183" y="877" text-anchor="middle" dominant-baseline="central">⑤ Approval check</text>
+  <text class="ts" x="183" y="897" text-anchor="middle" dominant-baseline="central">LangGraph pauses; UI prompts user</text>
+</g>
+
+<g class="node c-pink">
+  <rect x="368" y="856" width="270" height="62" rx="10"/>
+  <text class="th" x="503" y="877" text-anchor="middle" dominant-baseline="central">/approve endpoint</text>
+  <text class="ts" x="503" y="897" text-anchor="middle" dominant-baseline="central">User confirms; graph resumes</text>
+</g>
+
+<line x1="318" y1="887" x2="366" y2="887" class="arr" stroke="#D4537E" marker-end="url(#arrow)"/>
+
+<!-- Skip path merge -->
+<line x1="613" y1="796" x2="613" y2="928" stroke="#5F5E5A" stroke-width="1" fill="none"/>
+<line x1="613" y1="928" x2="355" y2="928" stroke="#5F5E5A" stroke-width="1" fill="none" marker-end="url(#arrow)"/>
+
+<line x1="503" y1="918" x2="503" y2="948" stroke="#D4537E" stroke-width="1" fill="none"/>
+<line x1="503" y1="948" x2="355" y2="948" stroke="#D4537E" stroke-width="1" fill="none" marker-end="url(#arrow)"/>
+
+<line x1="353" y1="938" x2="353" y2="966" class="arr" stroke="#1D9E75" marker-end="url(#arrow)"/>
+
+<!-- ══════════════════════════════════
+     STAGE ⑥ Root cause synthesis
+══════════════════════════════════ -->
+
+<g class="node c-teal">
+  <rect x="48" y="966" width="610" height="66" rx="10"/>
+  <text class="th" x="353" y="988" text-anchor="middle" dominant-baseline="central">⑥ Root cause synthesis</text>
+  <text class="ts" x="353" y="1010" text-anchor="middle" dominant-baseline="central">All check results → LLM → plain-English diagnosis + fix + remediation guide</text>
+</g>
+
+<!-- ══════════════════════════════════
+     LEGEND
+══════════════════════════════════ -->
+
+<rect x="48" y="1056" width="610" height="28" rx="6" fill="#13161e" stroke="rgba(255,255,255,0.06)" stroke-width="0.5"/>
+<circle cx="80"  cy="1070" r="5" fill="#534AB7"/>
+<text class="ts" x="91"  y="1074">Frontend</text>
+<circle cx="185" cy="1070" r="5" fill="#1D9E75"/>
+<text class="ts" x="196" y="1074">Intake / Output</text>
+<circle cx="320" cy="1070" r="5" fill="#378ADD"/>
+<text class="ts" x="331" y="1074">Artifacts</text>
+<circle cx="420" cy="1070" r="5" fill="#EF9F27"/>
+<text class="ts" x="431" y="1074">Diagnostics</text>
+<circle cx="535" cy="1070" r="5" fill="#D4537E"/>
+<text class="ts" x="546" y="1074">Approval</text>
+</svg>
+</div>
+
+<footer>AiDa Diagnostic Agent — System Architecture &nbsp;·&nbsp; aida_diagnostic_agent_flow</footer>
+
+</body>
+</html>

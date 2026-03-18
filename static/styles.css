@@ -130,6 +130,12 @@ body {
     color: var(--text-primary);
 }
 
+.aida-logo {
+    height: 24px;
+    width: auto;
+    object-fit: contain;
+}
+
 .subtitle {
     color: var(--text-secondary);
     font-size: 0.85rem;
@@ -400,17 +406,7 @@ input[type="file"]:hover {
     z-index: 10;
 }
 
-.input-area::before {
-    content: '';
-    position: absolute;
-    top: -60px;
-    left: 0;
-    right: 0;
-    height: 60px;
-    background: linear-gradient(to bottom, transparent, #FCFCFD);
-    pointer-events: none;
-    z-index: -1;
-}
+
 
 #chat-input {
     flex: 1;
@@ -426,12 +422,12 @@ input[type="file"]:hover {
     background: var(--bg-surface);
     color: var(--text-primary);
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    box-shadow: none;
 }
 
 #chat-input:focus {
     border-color: #BFDBFE;
-    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.1);
+    box-shadow: none;
 }
 
 #chat-input::placeholder {
