@@ -45,6 +45,9 @@ def process_bot_response(state, thread_id: str, last_msg: str) -> dict:
     elif demo_step == 5 and sandbox_local:
          if not os.path.exists(os.path.join(sandbox_local, "paths.csv")):
               shutil.copy("data/paths.csv", sandbox_local)
+    elif demo_step == 13 and sandbox_local:
+         if not os.path.exists(os.path.join(sandbox_local, "xgb.pmml")):
+              shutil.copy("data/xgb.pmml", sandbox_local)
 
     # Check if pausing for approval
     requires_approval = False

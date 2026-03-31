@@ -128,12 +128,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Simulate typical LLM typing/thinking delay (10s)
     function getThinkingDelay() {
-        return Math.floor(Math.random() * 2000) + 4000;
+        return Math.floor(Math.random() * 2000) + 2000;
     }
 
     // Simulate script execution delay (~20s)
     function getExecutionDelay() {
-        return Math.floor(Math.random() * 3000) + 10000;
+        return Math.floor(Math.random() * 3000) + 7000;
     }
 
     async function sendMessage(overrideText = null, isApproval = false) {
